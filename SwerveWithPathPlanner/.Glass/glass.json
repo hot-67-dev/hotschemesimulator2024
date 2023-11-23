@@ -1,0 +1,11 @@
+{
+  "NetworkTables": {
+    "Persistent Values": {
+      "open": false
+    }
+  },
+  "NetworkTables Settings": {
+    "mode": "Disabled",
+    "serverTeam": "67"
+  }
+}

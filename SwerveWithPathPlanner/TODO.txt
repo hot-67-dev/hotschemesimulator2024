@@ -1,0 +1,1 @@
+Fix vendor lib for .auto file path on rio

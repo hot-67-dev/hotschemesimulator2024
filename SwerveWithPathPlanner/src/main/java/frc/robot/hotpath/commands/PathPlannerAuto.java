@@ -1,19 +1,20 @@
 package frc.robot.hotpath.commands;
 
-import frc.robot.hotpath.auto.AutoBuilder;
-import frc.robot.hotpath.path.PathPlannerPath;
-import frc.robot.hotpath.util.PPLibTelemetry;
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.wpilibj.Filesystem;
-import edu.wpi.first.wpilibj2.command.Command;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.List;
+
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.wpilibj.Filesystem;
+import edu.wpi.first.wpilibj2.command.Command;
+import frc.robot.hotpath.auto.AutoBuilder;
 import frc.robot.hotpath.json.simple.JSONArray;
 import frc.robot.hotpath.json.simple.JSONObject;
 import frc.robot.hotpath.json.simple.parser.JSONParser;
+import frc.robot.hotpath.path.PathPlannerPath;
+import frc.robot.hotpath.util.PPLibTelemetry;
 
 /** A command that loads and runs an autonomous routine built using PathPlanner. */
 public class PathPlannerAuto extends Command {
@@ -49,7 +50,7 @@ public class PathPlannerAuto extends Command {
         new BufferedReader(
             new FileReader(
                 new File(
-                    Filesystem.getDeployDirectory(), "pathplanner/autos/" + autoName + ".auto")))) {
+                    Filesystem.getDeployDirectory(), (autoName.indexOf("/", 0) != -1) ? autoName : "pathplanner/autos/" + autoName + ".auto")))) {
       StringBuilder fileContentBuilder = new StringBuilder();
       String line;
       while ((line = br.readLine()) != null) {

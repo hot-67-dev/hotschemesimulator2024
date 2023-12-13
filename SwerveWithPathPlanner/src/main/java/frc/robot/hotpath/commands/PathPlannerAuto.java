@@ -8,6 +8,7 @@ import java.util.List;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj.Filesystem;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.hotpath.auto.AutoBuilder;
 import frc.robot.hotpath.json.simple.JSONArray;
@@ -28,12 +29,15 @@ public class PathPlannerAuto extends Command {
    *     autonomous routine
    */
   public PathPlannerAuto(String autoName) {
+    SmartDashboard.putNumber("test3", 1);
     if (!AutoBuilder.isConfigured()) {
+      SmartDashboard.putNumber("test7", 1);
       throw new RuntimeException(
           "AutoBuilder was not configured before attempting to load a PathPlannerAuto from file");
     }
-
+    SmartDashboard.putNumber("test4", 1);
     this.autoCommand = AutoBuilder.buildAuto(autoName);
+    SmartDashboard.putNumber("test5", 1);
     m_requirements = autoCommand.getRequirements();
     setName(autoName);
     PPLibTelemetry.registerHotReloadAuto(autoName, this);
@@ -50,7 +54,7 @@ public class PathPlannerAuto extends Command {
         new BufferedReader(
             new FileReader(
                 new File(
-                    Filesystem.getDeployDirectory(), (autoName.indexOf("/", 0) != -1) ? autoName : "pathplanner/autos/" + autoName + ".auto")))) {
+                    Filesystem.getDeployDirectory(), (autoName.indexOf("/", 0) != -1) ? autoName : (autoName.indexOf("/", 0) != -1) ? autoName : "pathplanner/autos/" + autoName + ".auto")))) {
       StringBuilder fileContentBuilder = new StringBuilder();
       String line;
       while ((line = br.readLine()) != null) {
@@ -76,7 +80,7 @@ public class PathPlannerAuto extends Command {
         new BufferedReader(
             new FileReader(
                 new File(
-                    Filesystem.getDeployDirectory(), "pathplanner/autos/" + autoName + ".auto")))) {
+                    Filesystem.getDeployDirectory(), (autoName.indexOf("/", 0) != -1) ? autoName : "pathplanner/autos/" + autoName + ".auto")))) {
       StringBuilder fileContentBuilder = new StringBuilder();
       String line;
       while ((line = br.readLine()) != null) {

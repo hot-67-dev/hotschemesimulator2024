@@ -7,9 +7,11 @@ package frc.robot;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.trajectory.TrajectoryConfig;
 import edu.wpi.first.wpilibj.TimedRobot;
-
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.trajectory.CustomHolonomicDriveController;
 import frc.robot.trajectory.CustomTrajectoryGenerator;
+import com.ctre.phoenix6.hardware.Pigeon2;
+
 
 import frc.robot.trajectory.Waypoint;
 import java.util.ArrayList;
@@ -34,6 +36,8 @@ public class Robot extends TimedRobot {
   private List<Waypoint> m_balls;
   private CustomTrajectoryGenerator m_TrajectoryGenerator;
   private TrajectoryConfig m_TrajectoryConfig;
+
+  private static Pigeon2 m_pigeon;
   
   @Override
   public void robotInit() {
@@ -41,23 +45,27 @@ public class Robot extends TimedRobot {
     m_TrajectoryGenerator = new CustomTrajectoryGenerator();
     m_balls = List.of(new Waypoint(new Translation2d(0,0)), new Waypoint(new Translation2d(1, 1)));
     m_TrajectoryConfig = new TrajectoryConfig(1.5, .2);
+    m_pigeon = new Pigeon2(50, "drivetrain");
   }
 
   @Override
-  public void robotPeriodic() {}
+  public void robotPeriodic() {
+    SmartDashboard.putNumber("theta", m_pigeon.getAngle()); // pidgeon bc reseting pos pissed me off
+  }
 
   @Override
   public void autonomousInit() {
-    
+    m_pigeon.reset();
   }
 
   @Override
   public void autonomousPeriodic() {
-    m_TrajectoryGenerator.generate(m_TrajectoryConfig, m_balls);
+    // m_TrajectoryGenerator.generate(m_TrajectoryConfig, m_balls);
   }
 
   @Override
   public void teleopInit() {
+    m_pigeon.reset();
     m_robotContainer.stickDrive();
   }
 

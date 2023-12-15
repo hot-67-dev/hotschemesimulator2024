@@ -93,6 +93,6 @@ public class Robot extends TimedRobot {
 
   @Override
   public void simulationPeriodic() {
-    // updateSimState(0.02, 12); static ref error (fix later)
+    m_robotContainer.simulationUpdate();
   }
 }

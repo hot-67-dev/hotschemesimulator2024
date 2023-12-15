@@ -97,6 +97,11 @@ public class RobotContainer {
     SmartDashboard.putBoolean("Drive Init", true);
   }
 
+  public void simulationUpdate() {
+    drivetrain.updateSimState(0.02, 12); // static ref error (fix later)
+    
+  }
+
   // to fix when auton works
   public String getAutonomousCommand() {
     return "No autonomous command configured";

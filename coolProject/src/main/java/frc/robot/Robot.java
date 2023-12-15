@@ -6,6 +6,7 @@ package frc.robot;
 
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.trajectory.TrajectoryConfig;
+import edu.wpi.first.util.sendable.Sendable;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.trajectory.CustomHolonomicDriveController;
@@ -60,13 +61,14 @@ public class Robot extends TimedRobot {
 
   @Override
   public void autonomousPeriodic() {
-    // m_TrajectoryGenerator.generate(m_TrajectoryConfig, m_balls);
+    m_TrajectoryGenerator.generate(m_TrajectoryConfig, m_balls);
+    SmartDashboard.putData((Sendable) m_TrajectoryGenerator.getDriveTrajectory());
+    
   }
 
   @Override
   public void teleopInit() {
     m_pigeon.reset();
-    m_robotContainer.stickDrive();
   }
 
   @Override

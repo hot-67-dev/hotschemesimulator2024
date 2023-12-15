@@ -15,7 +15,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.generated.TunerConstants;
 
 public class RobotContainer {
-  final double MaxSpeed = 6; // 6 meters per second desired top speed
+  final double MaxSpeed = 2; // 6 meters per second desired top speed (lowered for mayas house so she doesnt get murdered)
   final double MaxAngularRate = Math.PI; // Half a rotation per second max angular velocity
   double leftX;
   double leftY;
@@ -30,60 +30,74 @@ public class RobotContainer {
   SwerveRequest.PointWheelsAt point = new SwerveRequest.PointWheelsAt();
   Telemetry logger = new Telemetry(MaxSpeed);
 
+  // set LY deadband
   private double deadbandLeftY(){
     if(Math.abs(joystick.getLeftY()* joystick.getLeftY()) > 0.05){
       leftY = joystick.getLeftY();
+
       return leftY;
-    }
-    else{
+    } else {
       leftY = 0;
+
       return leftY;
     }
 
   }
+
+  // set LX deadband
   private double deadbandLeftX(){
-       if(Math.abs(joystick.getLeftX()* joystick.getLeftX()) > 0.05){
+    if(Math.abs(joystick.getLeftX()* joystick.getLeftX()) > 0.05){
       leftX = joystick.getLeftX() ;
+
       return leftX;
-    }
-    else{
+    } else {
       leftX = 0;
+
       return leftX;
     }
   }
 
-    private double deadbandRightX(){
-       if(Math.abs(joystick.getRightX() * joystick.getRightX()) > Math.abs(0.05)){
-      rightX = joystick.getRightX();
-      return rightX;
-    }
-    else{
+  // set RX deadband
+  private double deadbandRightX(){
+      if(Math.abs(joystick.getRightX() * joystick.getRightX()) > Math.abs(0.05)){
+    rightX = joystick.getRightX();
+
+    return rightX;
+    } else {
       rightX = 0;
+
       return rightX;
     }
   }
 
+  // method called in teleop, drives swerve with joysticks
   public void stickDrive() {
+    // sets current control to drive
     drivetrain.setControl(drive.withVelocityX(-deadbandLeftY()* MaxSpeed).withVelocityY(-deadbandLeftX() * MaxSpeed).withRotationalRate(-deadbandRightX() * MaxAngularRate));
-            
+    
+    // brakemode
     if (joystick.getAButton()) {
       drivetrain.setControl(brake);
     }
     
+    // pointmode
     if (joystick.getBButton()) {
       drivetrain.setControl(point.withModuleDirection(new Rotation2d(-deadbandLeftY(), -deadbandLeftX())));
     }
 
+    // start sim code
     if (Utils.isSimulation()) {
       drivetrain.seedFieldRelative(new Pose2d(new Translation2d(), Rotation2d.fromDegrees(90)));
     }
     drivetrain.registerTelemetry(logger::telemeterize);
   }
 
+  // constructor used to have command based process binding, changed to a test value
   public RobotContainer() {
     SmartDashboard.putBoolean("Drive Init", true);
   }
 
+  // to fix when auton works
   public String getAutonomousCommand() {
     return "No autonomous command configured";
   }

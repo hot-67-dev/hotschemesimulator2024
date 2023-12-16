@@ -4,6 +4,8 @@ import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveDrivetrain.SwerveDriveState;
 
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.networktables.DoubleArrayPublisher;
 import edu.wpi.first.networktables.DoublePublisher;
@@ -34,6 +36,7 @@ public class Telemetry {
     /* Robot pose for field positioning */
     NetworkTable table = inst.getTable("Pose");
     DoubleArrayPublisher fieldPub = table.getDoubleArrayTopic("robotPose").publish();
+    DoubleArrayPublisher adjFieldPub = table.getDoubleArrayTopic("adjRobotPose").publish();
     StringPublisher fieldTypePub = table.getStringTopic(".type").publish();
 
     /* Robot speeds for general checking */
@@ -50,6 +53,8 @@ public class Telemetry {
 
 //     mayas stupid pose sender
     private Pose2d pose;
+    private Pose2d adjustedPose;
+    private Transform2d poseOffset = new Transform2d(0, 0, Rotation2d.fromDegrees(0));
 
     /* Mechanisms to represent the swerve module states */
     Mechanism2d[] m_moduleMechanisms = new Mechanism2d[] {
@@ -81,11 +86,20 @@ public class Telemetry {
     public void telemeterize(SwerveDriveState state) {
         /* Telemeterize the pose */
         pose = state.Pose;
+
+        adjustedPose = pose.plus(poseOffset);
+
         fieldTypePub.set("Field2d");
         fieldPub.set(new double[] {
                 pose.getX(),
                 pose.getY(),
                 pose.getRotation().getDegrees()
+        });
+
+        adjFieldPub.set(new double[] {
+            adjustedPose.getX(),
+            adjustedPose.getY(),
+            adjustedPose.getRotation().getDegrees()
         });
 
         /* Telemeterize the robot's general speeds */
@@ -114,5 +128,14 @@ public class Telemetry {
 
     public Pose2d getPose2d() {
         return pose;
+    }
+
+    public Pose2d getAdjustedPose2d() {
+        // adjustedPose = pose.plus(poseOffset);
+        return adjustedPose;
+    }
+
+    public void resetAdjPose() {
+        poseOffset = new Transform2d(-pose.getX(), -pose.getY(), Rotation2d.fromDegrees(0));
     }
 }

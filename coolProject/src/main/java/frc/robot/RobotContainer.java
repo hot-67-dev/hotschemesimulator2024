@@ -41,20 +41,31 @@ public class RobotContainer {
   final double leftYdb = .018;
   final double rightXdb = .02;
 
+  private final double driveKP = .8;
+  private final double turnKP = 2;
+
   // pid for autons
-  private final PIDController xController = new PIDController(1, 0.0, 0.0);
-  private final PIDController yController = new PIDController(1, 0.0, 0.0);
-  private final PIDController thetaController = new PIDController(1, 0, 0);
-  // private final ProfiledPIDController thetaController = new ProfiledPIDController(1.0, 0.0, 0.0, new TrapezoidProfile.Constraints(Math.PI * 2, Math.PI)); // 1 r/s & .5 r/s^2
+  private final PIDController xController = new PIDController(driveKP, 5, 0.0);
+  private final PIDController yController = new PIDController(driveKP, 5, 0.0);
+  private final PIDController thetaController = new PIDController(turnKP, 0, 0);
+  // private final ProfiledPIDController thetaController = new ProfiledPIDController(turnKP, 0.0, 0.0, new TrapezoidProfile.Constraints(Math.PI * 2, Math.PI)); // 1 r/s & .5 r/s^2
 
   // private final HolonomicDriveController HoloDriveController = new HolonomicDriveController(xController, yController, thetaController); // built in controller
   private final CustomHolonomicDriveController HoloDriveController = new CustomHolonomicDriveController(xController, yController, thetaController); // custom controller
 
 
   // trajectory planner setup, m_points is waypoints in trajectory
-  private List<Waypoint> m_points;
+  private List<Pose2d> m_poses = List.of(new Pose2d(2, 0, Rotation2d.fromDegrees(0)),
+                                          new Pose2d(2, -.4, Rotation2d.fromDegrees(0)),
+                                          new Pose2d(0, .5, Rotation2d.fromDegrees(0)),
+                                          new Pose2d(-1, 0, Rotation2d.fromDegrees(0)));
+
+  public List<Waypoint> m_points = List.of(new Waypoint().fromHolonomicPose(m_poses.get(0)),
+                                          new Waypoint().fromHolonomicPose(m_poses.get(1)));
   private CustomTrajectoryGenerator m_TrajectoryGenerator;
   private TrajectoryConfig m_TrajectoryConfig;
+
+
 
 
   private final Timer autonTimer = new Timer();
@@ -131,9 +142,14 @@ public class RobotContainer {
       drivetrain.setControl(point.withModuleDirection(new Rotation2d(-deadbandLeftY(), -deadbandLeftX())));
     }
 
+    // reset pose2d
+    if (joystick.getYButton()) {
+      logger.resetAdjPose();
+    }
+
     // sim offset to match field
     if (Utils.isSimulation()) {
-      drivetrain.seedFieldRelative(new Pose2d(new Translation2d(), Rotation2d.fromDegrees(90)));
+      // drivetrain.seedFieldRelative(new Pose2d(new Translation2d(), Rotation2d.fromDegrees(90)));
     }
     drivetrain.registerTelemetry(logger::telemeterize);
   }
@@ -148,14 +164,16 @@ public class RobotContainer {
 
   }
 
+  // should probably made an auton class when I started :3
+
+
   public void autonSetup() {
     m_TrajectoryGenerator = new CustomTrajectoryGenerator();
-    m_points = List.of(new Waypoint().fromHolonomicPose(new Pose2d(2, 0, Rotation2d.fromDegrees(90))),
-                       new Waypoint().fromHolonomicPose(new Pose2d(-1, -.5, Rotation2d.fromDegrees(0)))
-                       );
-    m_TrajectoryConfig = new TrajectoryConfig(1.5, .2);
+    m_TrajectoryConfig = new TrajectoryConfig(.3, .01);
+    m_TrajectoryConfig.setStartVelocity(0);
+    m_TrajectoryConfig.setEndVelocity(0);
     m_TrajectoryGenerator.generate(m_TrajectoryConfig, m_points);
-    HoloDriveController.setTolerance(new Pose2d(.2, .2, new Rotation2d(10)));
+    HoloDriveController.setTolerance(new Pose2d(.1, .1, Rotation2d.fromDegrees(7)));
 
     drivetrain.registerTelemetry(logger::telemeterize);
     autonTimer.restart();
@@ -165,7 +183,7 @@ public class RobotContainer {
   public void autonDriveTrajectory() {
     drivetrain.registerTelemetry(logger::telemeterize);
 
-    ChassisSpeeds autoSpeeds = HoloDriveController.calculate(logger.getPose2d(), 
+    ChassisSpeeds autoSpeeds = HoloDriveController.calculate(logger.getAdjustedPose2d(), 
                   m_TrajectoryGenerator.getDriveTrajectory().sample(autonTimer.get()),
                   m_TrajectoryGenerator.getHolonomicRotationSequence().sample(autonTimer.get())
                   );

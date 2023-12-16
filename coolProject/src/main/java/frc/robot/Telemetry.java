@@ -43,9 +43,13 @@ public class Telemetry {
     DoublePublisher speed = driveStats.getDoubleTopic("Speed").publish();
     DoublePublisher odomPeriod = driveStats.getDoubleTopic("Odometry Period").publish();
 
+
     /* Keep a reference of the last pose to calculate the speeds */
     Pose2d m_lastPose = new Pose2d();
     double lastTime = Utils.getCurrentTimeSeconds();
+
+//     mayas stupid pose sender
+    private Pose2d pose;
 
     /* Mechanisms to represent the swerve module states */
     Mechanism2d[] m_moduleMechanisms = new Mechanism2d[] {
@@ -76,7 +80,7 @@ public class Telemetry {
     /* Accept the swerve drive state and telemeterize it to smartdashboard */
     public void telemeterize(SwerveDriveState state) {
         /* Telemeterize the pose */
-        Pose2d pose = state.Pose;
+        pose = state.Pose;
         fieldTypePub.set("Field2d");
         fieldPub.set(new double[] {
                 pose.getX(),
@@ -106,5 +110,9 @@ public class Telemetry {
 
             SmartDashboard.putData("Module " + i, m_moduleMechanisms[i]);
         }
+    }
+
+    public Pose2d getPose2d() {
+        return pose;
     }
 }

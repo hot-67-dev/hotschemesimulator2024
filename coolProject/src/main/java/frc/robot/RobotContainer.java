@@ -5,28 +5,28 @@
 package frc.robot;
 
 import java.util.List;
+
+import org.opencv.core.Mat;
+
 import edu.wpi.first.wpilibj.Timer;
 
 import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveRequest;
 
 import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.trajectory.TrajectoryConfig;
+import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.generated.TunerConstants;
 import frc.robot.trajectory.CustomTrajectoryGenerator;
 import frc.robot.trajectory.Waypoint;
 import frc.robot.trajectory.CustomHolonomicDriveController;
-
-import edu.wpi.first.networktables.DoubleArraySubscriber;
-import edu.wpi.first.networktables.NetworkTable;
-import edu.wpi.first.networktables.NetworkTableInstance;
-import edu.wpi.first.networktables.PubSubOption;
 
 public class RobotContainer {
   final double MaxSpeed = 2; // 6 meters per second desired top speed (lowered for mayas house so she doesnt get murdered)
@@ -35,27 +35,23 @@ public class RobotContainer {
   final double leftYdb = .015;
   final double rightXdb = .02;
 
-    // pid for autons
-  private final PIDController xController = new PIDController(0.0, 0.0, 0.0);
-  private final PIDController yController = new PIDController(0.0, 0.0, 0.0);
-  private final PIDController thetaController = new PIDController(0.0, 0.0, 0.0);
+  // pid for autons
+  private final PIDController xController = new PIDController(1, 0.0, 0.0);
+  private final PIDController yController = new PIDController(1, 0.0, 0.0);
+  private final PIDController thetaController = new PIDController(1, 0, 0);
+  // private final ProfiledPIDController thetaController = new ProfiledPIDController(1.0, 0.0, 0.0, new TrapezoidProfile.Constraints(Math.PI * 2, Math.PI)); // 1 r/s & .5 r/s^2
 
-  private final CustomHolonomicDriveController customHolonomicDriveController = new CustomHolonomicDriveController(xController, yController, thetaController);
+  private final CustomHolonomicDriveController HoloDriveController = new CustomHolonomicDriveController(xController, yController, thetaController);
 
+  // trajectory planner setup, m_balls is waypoints in trajectory
   private List<Waypoint> m_balls;
   private CustomTrajectoryGenerator m_TrajectoryGenerator;
   private TrajectoryConfig m_TrajectoryConfig;
 
-  private Rotation2d robotRotation = new Rotation2d(0);
-  private Pose2d robotPose = new Pose2d(0, 0, robotRotation);
-
-  // // all meters per sec
-  // private static double maxVelocity;
-  // private static double maxAccel;
-  // private static double maxCentripAccel;
 
   private final Timer autonTimer = new Timer();
 
+  // controller db local vars
   double leftX;
   double leftY;
   double rightX;
@@ -146,14 +142,13 @@ public class RobotContainer {
 
   public void autonSetup() {
     m_TrajectoryGenerator.generate(m_TrajectoryConfig, m_balls);
-    // autonTimer.restart();
-    // m_TrajectoryGenerator.getDriveTrajectory().sample(autonTimer.get());
+    HoloDriveController.setTolerance(new Pose2d(.2, .2, new Rotation2d(15)));
+    autonTimer.restart();
   }
 
-  // to fix when auton works
+  // to fix
   public void autonDrivePeriodic() {
-    // m_TrajectoryGenerator.getDriveTrajectory().sample(5).poseMeters;
-    drivetrain.setControl(brake);
-    logger.getPose2d().getY();
-  } // TOD0: add holo controller for velocity
+    ChassisSpeeds wRizz = HoloDriveController.calculate(logger.getPose2d(), m_TrajectoryGenerator.getDriveTrajectory().sample(autonTimer.get()), m_TrajectoryGenerator.getHolonomicRotationSequence().sample(autonTimer.get()));
+    drivetrain.setControl(drive.withVelocityX(wRizz.vxMetersPerSecond).withVelocityY(wRizz.vyMetersPerSecond).withRotationalRate(wRizz.omegaRadiansPerSecond));
+  }
 }

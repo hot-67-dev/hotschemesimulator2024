@@ -12,23 +12,27 @@ import edu.wpi.first.wpilibj.Timer;
 
 import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveRequest;
+import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
+
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import frc.robot.generated.TunerConstants;
+
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
+
+import edu.wpi.first.math.trajectory.TrajectoryConfig;
+import frc.robot.trajectory.CustomTrajectoryGenerator;
+import frc.robot.trajectory.Waypoint;
 
 import edu.wpi.first.math.controller.HolonomicDriveController;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.math.trajectory.TrajectoryConfig;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
-import edu.wpi.first.wpilibj.XboxController;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import frc.robot.generated.TunerConstants;
+
 import frc.robot.trajectory.CustomHolonomicDriveController;
-import frc.robot.trajectory.CustomTrajectoryGenerator;
-import frc.robot.trajectory.Waypoint;
-// import frc.robot.trajectory.CustomHolonomicDriveController;
+
 
 public class RobotContainer {
   final double MaxSpeed = 2; // 6 meters per second desired top speed (lowered for mayas house so she doesnt get murdered)
@@ -47,8 +51,8 @@ public class RobotContainer {
   private final CustomHolonomicDriveController HoloDriveController = new CustomHolonomicDriveController(xController, yController, thetaController); // custom controller
 
 
-  // trajectory planner setup, m_balls is waypoints in trajectory
-  private List<Waypoint> m_balls;
+  // trajectory planner setup, m_points is waypoints in trajectory
+  private List<Waypoint> m_points;
   private CustomTrajectoryGenerator m_TrajectoryGenerator;
   private TrajectoryConfig m_TrajectoryConfig;
 
@@ -113,7 +117,9 @@ public class RobotContainer {
   // method called in teleop, drives swerve with joysticks
   public void stickDrive() {
     // sets current control to drive
-    drivetrain.setControl(drive.withVelocityX(-deadbandLeftY()* MaxSpeed).withVelocityY(-deadbandLeftX() * MaxSpeed).withRotationalRate(-deadbandRightX() * MaxAngularRate));
+    drivetrain.setControl(drive.withVelocityX(-deadbandLeftY()* MaxSpeed)
+                              .withVelocityY(-deadbandLeftX() * MaxSpeed)
+                              .withRotationalRate(-deadbandRightX() * MaxAngularRate));
     
     // brakemode
     if (joystick.getAButton()) {
@@ -134,9 +140,7 @@ public class RobotContainer {
 
   // constructor :3
   public RobotContainer() {
-    m_TrajectoryGenerator = new CustomTrajectoryGenerator();
-    m_balls = List.of(new Waypoint(new Translation2d(1,0)), new Waypoint(new Translation2d(1, -.5)));
-    m_TrajectoryConfig = new TrajectoryConfig(1.5, .2);
+    
   }
 
   public void simulationUpdate() {
@@ -145,18 +149,28 @@ public class RobotContainer {
   }
 
   public void autonSetup() {
-    m_TrajectoryGenerator.generate(m_TrajectoryConfig, m_balls);
-    HoloDriveController.setTolerance(new Pose2d(.2, .2, new Rotation2d(15)));
+    m_TrajectoryGenerator = new CustomTrajectoryGenerator();
+    m_points = List.of(new Waypoint().fromHolonomicPose(new Pose2d(2, 0, Rotation2d.fromDegrees(90))),
+                       new Waypoint().fromHolonomicPose(new Pose2d(-1, -.5, Rotation2d.fromDegrees(0)))
+                       );
+    m_TrajectoryConfig = new TrajectoryConfig(1.5, .2);
+    m_TrajectoryGenerator.generate(m_TrajectoryConfig, m_points);
+    HoloDriveController.setTolerance(new Pose2d(.2, .2, new Rotation2d(10)));
+
     drivetrain.registerTelemetry(logger::telemeterize);
     autonTimer.restart();
   }
 
   // to fix
-  public void autonDrivePeriodic() {
-
-    // ChassisSpeeds wRizz = HoloDriveController.calculate(logger.getPose2d(), m_TrajectoryGenerator.getDriveTrajectory().sample(autonTimer.get()), Rotation2d.fromDegrees(20));
-    ChassisSpeeds wRizz = HoloDriveController.calculate(logger.getPose2d(), m_TrajectoryGenerator.getDriveTrajectory().sample(autonTimer.get()), m_TrajectoryGenerator.getHolonomicRotationSequence().sample(autonTimer.get()));
-    drivetrain.setControl(drive.withVelocityX(wRizz.vxMetersPerSecond).withVelocityY(wRizz.vyMetersPerSecond).withRotationalRate(wRizz.omegaRadiansPerSecond));
+  public void autonDriveTrajectory() {
     drivetrain.registerTelemetry(logger::telemeterize);
+
+    ChassisSpeeds autoSpeeds = HoloDriveController.calculate(logger.getPose2d(), 
+                  m_TrajectoryGenerator.getDriveTrajectory().sample(autonTimer.get()),
+                  m_TrajectoryGenerator.getHolonomicRotationSequence().sample(autonTimer.get())
+                  );
+    drivetrain.setControl(drive.withVelocityX(autoSpeeds.vxMetersPerSecond)
+                              .withVelocityY(autoSpeeds.vyMetersPerSecond)
+                              .withRotationalRate(autoSpeeds.omegaRadiansPerSecond));
   }
 }

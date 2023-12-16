@@ -35,20 +35,21 @@ import frc.robot.trajectory.CustomHolonomicDriveController;
 
 
 public class RobotContainer {
-  final double MaxSpeed = 2; // 6 meters per second desired top speed (lowered for mayas house so she doesnt get murdered)
-  final double MaxAngularRate = 2 * Math.PI; //a rotation per second max angular velocity
+  final double MaxSpeed = 3; // 6 meters per second desired top speed (lowered for mayas house so I dont get murdered)
+  final double MaxAccel = .8;
+  final double MaxAngularRate = 2 * Math.PI; // 1 rotation per second max angular velocity
+  final double MaxAngularAccel = Math.PI; 
   final double leftXdb = .018;
   final double leftYdb = .018;
   final double rightXdb = .02;
 
-  private final double driveKP = .8;
-  private final double turnKP = 2;
+  private final double driveKP = 6;
+  private final double turnKP = 8;
 
   // pid for autons
-  private final PIDController xController = new PIDController(driveKP, 5, 0.0);
-  private final PIDController yController = new PIDController(driveKP, 5, 0.0);
-  private final PIDController thetaController = new PIDController(turnKP, 0, 0);
-  // private final ProfiledPIDController thetaController = new ProfiledPIDController(turnKP, 0.0, 0.0, new TrapezoidProfile.Constraints(Math.PI * 2, Math.PI)); // 1 r/s & .5 r/s^2
+  private final ProfiledPIDController xController = new ProfiledPIDController(driveKP, 0, 0.0, new TrapezoidProfile.Constraints(MaxSpeed, MaxAccel));
+  private final ProfiledPIDController yController = new ProfiledPIDController(driveKP, 0, 0.0, new TrapezoidProfile.Constraints(MaxSpeed, MaxAccel));
+  private final ProfiledPIDController thetaController = new ProfiledPIDController(turnKP, 0.0, 0.0, new TrapezoidProfile.Constraints(MaxAngularRate, MaxAngularAccel));
 
   // private final HolonomicDriveController HoloDriveController = new HolonomicDriveController(xController, yController, thetaController); // built in controller
   private final CustomHolonomicDriveController HoloDriveController = new CustomHolonomicDriveController(xController, yController, thetaController); // custom controller
@@ -56,9 +57,9 @@ public class RobotContainer {
 
   // trajectory planner setup, m_points is waypoints in trajectory
   private List<Pose2d> m_poses = List.of(new Pose2d(2, 0, Rotation2d.fromDegrees(0)),
-                                          new Pose2d(2, -.4, Rotation2d.fromDegrees(0)),
+                                          new Pose2d(2, -.5, Rotation2d.fromDegrees(0)),
                                           new Pose2d(0, .5, Rotation2d.fromDegrees(0)),
-                                          new Pose2d(-1, 0, Rotation2d.fromDegrees(0)));
+                                          new Pose2d(1, 0, Rotation2d.fromDegrees(0)));
 
   public List<Waypoint> m_points = List.of(new Waypoint().fromHolonomicPose(m_poses.get(0)),
                                           new Waypoint().fromHolonomicPose(m_poses.get(1)));
@@ -173,8 +174,8 @@ public class RobotContainer {
     m_TrajectoryConfig.setStartVelocity(0);
     m_TrajectoryConfig.setEndVelocity(0);
     m_TrajectoryGenerator.generate(m_TrajectoryConfig, m_points);
-    HoloDriveController.setTolerance(new Pose2d(.1, .1, Rotation2d.fromDegrees(7)));
-
+    HoloDriveController.setTolerance(new Pose2d(.3, .3, Rotation2d.fromDegrees(15))); // T0D0: fix holo drive tolarances to actual fucking numbers not a random ass pose 2d bc this code cant get any less readable
+    
     drivetrain.registerTelemetry(logger::telemeterize);
     autonTimer.restart();
   }

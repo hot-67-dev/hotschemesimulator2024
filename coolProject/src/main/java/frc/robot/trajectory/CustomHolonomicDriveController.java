@@ -8,6 +8,7 @@
 package frc.robot.trajectory;
 
 import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
@@ -31,9 +32,9 @@ public class CustomHolonomicDriveController {
   private Pose2d m_poseTolerance = new Pose2d();
   private boolean m_enabled = true;
 
-  private final PIDController m_xController;
-  private final PIDController m_yController;
-  private final PIDController m_thetaController;
+  private final ProfiledPIDController m_xController;
+  private final ProfiledPIDController m_yController;
+  private final ProfiledPIDController m_thetaController;
 
   /**
    * Constructs a holonomic drive controller.
@@ -44,7 +45,7 @@ public class CustomHolonomicDriveController {
    */
   @SuppressWarnings("ParameterName")
   public CustomHolonomicDriveController(
-      PIDController xController, PIDController yController, PIDController thetaController) {
+      ProfiledPIDController xController, ProfiledPIDController yController, ProfiledPIDController thetaController) {
     m_xController = xController;
     m_yController = yController;
     m_thetaController = thetaController;

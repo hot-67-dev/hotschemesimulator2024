@@ -35,7 +35,7 @@ import frc.robot.trajectory.CustomHolonomicDriveController;
 
 
 public class RobotContainer {
-  final double MaxSpeed = 3; // 6 meters per second desired top speed (lowered for mayas house so I dont get murdered)
+  final double MaxSpeed = 2; // 6 meters per second desired top speed (lowered for mayas house so I dont get murdered)
   final double MaxAccel = .8;
   final double MaxAngularRate = 2 * Math.PI; // 1 rotation per second max angular velocity
   final double MaxAngularAccel = Math.PI; 
@@ -56,13 +56,13 @@ public class RobotContainer {
 
 
   // trajectory planner setup, m_points is waypoints in trajectory
-  private List<Pose2d> m_poses = List.of(new Pose2d(2, 0, Rotation2d.fromDegrees(0)),
-                                          new Pose2d(2, -.5, Rotation2d.fromDegrees(0)),
-                                          new Pose2d(0, .5, Rotation2d.fromDegrees(0)),
-                                          new Pose2d(1, 0, Rotation2d.fromDegrees(0)));
+  private List<Pose2d> m_poses = List.of(new Pose2d(-.3, -1.6, Rotation2d.fromDegrees(0)),
+                                          new Pose2d(2, -1.3, Rotation2d.fromDegrees(0)),
+                                          new Pose2d(2.6, -1, Rotation2d.fromDegrees(0)));
 
   public List<Waypoint> m_points = List.of(new Waypoint().fromHolonomicPose(m_poses.get(0)),
-                                          new Waypoint().fromHolonomicPose(m_poses.get(1)));
+                                          new Waypoint().fromHolonomicPose(m_poses.get(1)),
+                                          new Waypoint().fromHolonomicPose(m_poses.get(2)));
   private CustomTrajectoryGenerator m_TrajectoryGenerator;
   private TrajectoryConfig m_TrajectoryConfig;
 
@@ -155,10 +155,10 @@ public class RobotContainer {
     drivetrain.registerTelemetry(logger::telemeterize);
   }
 
-  // constructor :3
-  public RobotContainer() {
+  // constructor :3 should probably move code
+  public RobotContainer() {}
     
-  }
+  
 
   public void simulationUpdate() {
     drivetrain.updateSimState(0.02, 12);
@@ -170,12 +170,16 @@ public class RobotContainer {
 
   public void autonSetup() {
     m_TrajectoryGenerator = new CustomTrajectoryGenerator();
-    m_TrajectoryConfig = new TrajectoryConfig(.3, .01);
+    m_TrajectoryConfig = new TrajectoryConfig(MaxSpeed, MaxAccel);
     m_TrajectoryConfig.setStartVelocity(0);
     m_TrajectoryConfig.setEndVelocity(0);
     m_TrajectoryGenerator.generate(m_TrajectoryConfig, m_points);
-    HoloDriveController.setTolerance(new Pose2d(.3, .3, Rotation2d.fromDegrees(15))); // T0D0: fix holo drive tolarances to actual fucking numbers not a random ass pose 2d bc this code cant get any less readable
+    HoloDriveController.setTolerance(new Pose2d(.05, .05, Rotation2d.fromDegrees(15))); // T0D0: fix holo drive tolarances to actual fucking numbers not a random ass pose 2d bc this code cant get any less readable
     
+    xController.reset(logger.adjustedPose.getX(), logger.velocities.getX());
+    yController.reset(logger.adjustedPose.getY(), logger.velocities.getY());
+    thetaController.reset(logger.pose.getRotation().getDegrees(), 0); // assumes no rotational movement
+
     drivetrain.registerTelemetry(logger::telemeterize);
     autonTimer.restart();
   }
@@ -183,13 +187,17 @@ public class RobotContainer {
   // to fix
   public void autonDriveTrajectory() {
     drivetrain.registerTelemetry(logger::telemeterize);
+    ChassisSpeeds autoSpeeds = HoloDriveController.calculate(logger.adjustedPose, 
+                        m_TrajectoryGenerator.getDriveTrajectory().sample(autonTimer.get()),
+                        m_TrajectoryGenerator.getHolonomicRotationSequence().sample(autonTimer.get())
+                       );
+    if (!HoloDriveController.atReference()) {
+      drivetrain.setControl(drive.withVelocityX(autoSpeeds.vxMetersPerSecond)
+                                .withVelocityY(autoSpeeds.vyMetersPerSecond)
+                                .withRotationalRate(autoSpeeds.omegaRadiansPerSecond));
 
-    ChassisSpeeds autoSpeeds = HoloDriveController.calculate(logger.getAdjustedPose2d(), 
-                  m_TrajectoryGenerator.getDriveTrajectory().sample(autonTimer.get()),
-                  m_TrajectoryGenerator.getHolonomicRotationSequence().sample(autonTimer.get())
-                  );
-    drivetrain.setControl(drive.withVelocityX(autoSpeeds.vxMetersPerSecond)
-                              .withVelocityY(autoSpeeds.vyMetersPerSecond)
-                              .withRotationalRate(autoSpeeds.omegaRadiansPerSecond));
+    } else {
+      drivetrain.setControl(brake);
+    }
   }
 }

@@ -51,9 +51,12 @@ public class Telemetry {
     Pose2d m_lastPose = new Pose2d();
     double lastTime = Utils.getCurrentTimeSeconds();
 
-//     mayas stupid pose sender
-    private Pose2d pose;
-    private Pose2d adjustedPose;
+    // defaut pose is 0, 0, 0
+    public Pose2d pose = new Pose2d(0, 0, Rotation2d.fromDegrees(0));
+    public Pose2d adjustedPose = pose;
+
+    public Translation2d velocities = new Translation2d(0, Rotation2d.fromDegrees(0));
+
     private Transform2d poseOffset = new Transform2d(0, 0, Rotation2d.fromDegrees(0));
 
     /* Mechanisms to represent the swerve module states */
@@ -109,7 +112,7 @@ public class Telemetry {
         Translation2d distanceDiff = pose.minus(m_lastPose).getTranslation();
         m_lastPose = pose;
 
-        Translation2d velocities = distanceDiff.div(diffTime);
+        velocities = distanceDiff.div(diffTime);
 
         speed.set(velocities.getNorm());
         velocityX.set(velocities.getX());
@@ -124,15 +127,6 @@ public class Telemetry {
 
             SmartDashboard.putData("Module " + i, m_moduleMechanisms[i]);
         }
-    }
-
-    public Pose2d getPose2d() {
-        return pose;
-    }
-
-    public Pose2d getAdjustedPose2d() {
-        // adjustedPose = pose.plus(poseOffset);
-        return adjustedPose;
     }
 
     public void resetAdjPose() {

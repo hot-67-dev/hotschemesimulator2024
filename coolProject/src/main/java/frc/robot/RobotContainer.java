@@ -39,9 +39,12 @@ public class RobotContainer {
   final double MaxAccel = .8;
   final double MaxAngularRate = Math.PI; // 1 rotation per second max angular velocity
   final double MaxAngularAccel = Math.PI * .5; 
-  final double leftXdb = .018;
-  final double leftYdb = .018;
-  final double rightXdb = .02;
+  final double leftXdb = .1;
+  final double leftYdb = .1; 
+  final double leftA = 1.0101010101;
+
+  final double rightXdb = .15;
+  final double rightA = 1.02301790281;
 
   private final double driveKP = 6;
   private final double turnKP = 2;
@@ -161,32 +164,12 @@ public class RobotContainer {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   // method called in teleop, drives swerve with joysticks
   public void stickDrive() {
     // sets current control to drive
-    drivetrain.setControl(drive.withVelocityX(-smartDeadbandLeftY(.15, 1.02301790281) * MaxSpeed)
-                              .withVelocityY(-smartDeadbandLeftX(.15, 1.02301790281) * MaxSpeed)
-                              .withRotationalRate(-smartDeadbandRightX(.15, 1.02301790281) * MaxAngularRate));
+    drivetrain.setControl(drive.withVelocityX(-smartDeadbandLeftY(leftYdb, leftA) * MaxSpeed)
+                              .withVelocityY(-smartDeadbandLeftX(leftXdb, leftA) * MaxSpeed)
+                              .withRotationalRate(-smartDeadbandRightX(rightXdb, rightA) * MaxAngularRate));
     
     // brakemode
     if (joystick.getAButton()) {

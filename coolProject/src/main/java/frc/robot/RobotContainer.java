@@ -37,14 +37,14 @@ import frc.robot.trajectory.CustomHolonomicDriveController;
 public class RobotContainer {
   final double MaxSpeed = 2; // 6 meters per second desired top speed (lowered for mayas house so I dont get murdered)
   final double MaxAccel = .8;
-  final double MaxAngularRate = 2 * Math.PI; // 1 rotation per second max angular velocity
-  final double MaxAngularAccel = Math.PI; 
+  final double MaxAngularRate = Math.PI; // 1 rotation per second max angular velocity
+  final double MaxAngularAccel = Math.PI * .5; 
   final double leftXdb = .018;
   final double leftYdb = .018;
   final double rightXdb = .02;
 
   private final double driveKP = 6;
-  private final double turnKP = 8;
+  private final double turnKP = 2;
 
   // pid for autons
   private final ProfiledPIDController xController = new ProfiledPIDController(driveKP, 0, 0.0, new TrapezoidProfile.Constraints(MaxSpeed, MaxAccel));
@@ -56,25 +56,24 @@ public class RobotContainer {
 
 
   // trajectory planner setup, m_points is waypoints in trajectory
-  private List<Pose2d> m_poses = List.of(new Pose2d(-.3, -1.6, Rotation2d.fromDegrees(0)),
-                                          new Pose2d(2, -1.3, Rotation2d.fromDegrees(0)),
-                                          new Pose2d(2.6, -1, Rotation2d.fromDegrees(0)));
+  private List<Pose2d> m_poses = List.of(new Pose2d(-.3, -1.1, Rotation2d.fromDegrees(90)),
+                                          new Pose2d(2, -.9, Rotation2d.fromDegrees(90)),
+                                          new Pose2d(2.6, -.7, Rotation2d.fromDegrees(0)));
 
   public List<Waypoint> m_points = List.of(new Waypoint().fromHolonomicPose(m_poses.get(0)),
                                           new Waypoint().fromHolonomicPose(m_poses.get(1)),
-                                          new Waypoint().fromHolonomicPose(m_poses.get(2)));
+                                          new Waypoint().fromHolonomicPose(m_poses.get(2))
+                                          );
   private CustomTrajectoryGenerator m_TrajectoryGenerator;
   private TrajectoryConfig m_TrajectoryConfig;
 
-
+  double LY;
+  double LX;
+  double RX;
 
 
   private final Timer autonTimer = new Timer();
 
-  // controller db local vars
-  double leftX;
-  double leftY;
-  double rightX;
 
 
   /* Setting up bindings for necessary control of the swerve drive platform */
@@ -87,51 +86,107 @@ public class RobotContainer {
   Telemetry logger = new Telemetry(MaxSpeed);
 
   // set LY deadband
-  private double deadbandLeftY(){
-    if(Math.abs(joystick.getLeftY()* joystick.getLeftY()) > leftYdb){
-      leftY = joystick.getLeftY();
+  private double deadbandLeftY() {
+    LY = joystick.getLeftY();
+    if (Math.abs(LY) > leftYdb) {
 
-      return leftY;
+      return LY;
     } else {
-      leftY = 0;
 
-      return leftY;
+      return 0;
     }
-
   }
 
   // set LX deadband
-  private double deadbandLeftX(){
-    if(Math.abs(joystick.getLeftX()* joystick.getLeftX()) > leftXdb){
-      leftX = joystick.getLeftX() ;
-
-      return leftX;
+  private double deadbandLeftX() {
+    LX = joystick.getLeftX();
+    if (Math.abs(joystick.getLeftX()* joystick.getLeftX()) > leftXdb) {
+      
+      return joystick.getLeftX();
     } else {
-      leftX = 0;
 
-      return leftX;
+      return 0;
     }
   }
 
   // set RX deadband
-  private double deadbandRightX(){
-      if(Math.abs(joystick.getRightX() * joystick.getRightX()) > rightXdb){
-    rightX = joystick.getRightX();
+  private double deadbandRightX() {
+    RX = joystick.getRightX();
+    if (Math.abs(RX) > rightXdb) {
 
-    return rightX;
+    return RX;
     } else {
-      rightX = 0;
 
-      return rightX;
+      return 0;
     }
   }
+
+
+  // go to https://www.desmos.com/calculator/i80hb817ej to generate the A constant
+  private double smartDeadbandLeftY(double dbWidth, double a) {
+    LY = joystick.getLeftY();
+    if (Math.abs(LY) >= dbWidth) {
+
+      return a * (LY + dbWidth) * LY * (LY - dbWidth);
+    } else {
+
+      return 0;
+    }
+  }
+
+
+    // set LX deadband
+  private double smartDeadbandLeftX(double dbWidth, double a) {
+    LX = joystick.getLeftX();
+    if (Math.abs(LX) > dbWidth) {
+      
+      return a * (LX + dbWidth) * LX * (LX - dbWidth);
+    } else {
+
+      return 0;
+    }
+  }
+
+  // set RX deadband
+  private double smartDeadbandRightX(double dbWidth, double a) {
+    RX = joystick.getRightX();
+    if (Math.abs(RX) > dbWidth) {
+
+    return a * (RX + dbWidth) * RX * (RX - dbWidth);
+    } else {
+
+      return 0;
+    }
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   // method called in teleop, drives swerve with joysticks
   public void stickDrive() {
     // sets current control to drive
-    drivetrain.setControl(drive.withVelocityX(-deadbandLeftY()* MaxSpeed)
-                              .withVelocityY(-deadbandLeftX() * MaxSpeed)
-                              .withRotationalRate(-deadbandRightX() * MaxAngularRate));
+    drivetrain.setControl(drive.withVelocityX(-smartDeadbandLeftY(.15, 1.02301790281) * MaxSpeed)
+                              .withVelocityY(-smartDeadbandLeftX(.15, 1.02301790281) * MaxSpeed)
+                              .withRotationalRate(-smartDeadbandRightX(.15, 1.02301790281) * MaxAngularRate));
     
     // brakemode
     if (joystick.getAButton()) {
@@ -174,7 +229,7 @@ public class RobotContainer {
     m_TrajectoryConfig.setStartVelocity(0);
     m_TrajectoryConfig.setEndVelocity(0);
     m_TrajectoryGenerator.generate(m_TrajectoryConfig, m_points);
-    HoloDriveController.setTolerance(new Pose2d(.05, .05, Rotation2d.fromDegrees(15))); // T0D0: fix holo drive tolarances to actual fucking numbers not a random ass pose 2d bc this code cant get any less readable
+    HoloDriveController.setTolerance(new Pose2d(.05, .05, Rotation2d.fromDegrees(5))); // T0D0: fix holo drive tolarances to actual fucking numbers not a random ass pose 2d bc this code cant get any less readable
     
     xController.reset(logger.adjustedPose.getX(), logger.velocities.getX());
     yController.reset(logger.adjustedPose.getY(), logger.velocities.getY());

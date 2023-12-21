@@ -125,7 +125,7 @@ public class RobotContainer {
   }
 
 
-  // go to https://www.desmos.com/calculator/i80hb817ej to generate the A constant
+  // go to https://www.desmos.com/calculator/lj6z51c59x to generate the A constant
   private double smartDeadbandLeftY(double dbWidth, double a) {
     LY = joystick.getLeftY();
     if (Math.abs(LY) >= dbWidth) {

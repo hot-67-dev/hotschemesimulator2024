@@ -4,6 +4,7 @@
 
 package frc.robot;
 
+import java.security.InvalidParameterException;
 import java.util.List;
 
 import org.opencv.core.Mat;
@@ -15,7 +16,7 @@ import com.ctre.phoenix6.mechanisms.swerve.SwerveDrivetrain;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveRequest;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
-
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.generated.TunerConstants;
 
@@ -51,6 +52,9 @@ public class RobotContainer {
 
   private final double driveKP = 6;
   private final double turnKP = 2;
+
+  Pose2d lastTarget = new Pose2d(0, 0, Rotation2d.fromDegrees(0));
+  // double lastTarget = 0;
 
   // pid for autons
   private final ProfiledPIDController xController = new ProfiledPIDController(driveKP, 0, 0.0, new TrapezoidProfile.Constraints(MaxSpeed, MaxAccel));
@@ -106,7 +110,9 @@ public class RobotContainer {
 
 
   // constructor :3 should probably move code
-  public RobotContainer() {}
+  public RobotContainer() {
+    
+  }
 
   // set LY deadband
   private double deadbandLeftY() {
@@ -261,38 +267,48 @@ public class RobotContainer {
   }
 
   public void setDynamicTrajectory(Pose2d targetPose2d) {
-    m_dynamicTrajectoryGenerator = new CustomTrajectoryGenerator();
-    m_dynamicTrajectoryConfig = new TrajectoryConfig(MaxSpeed, MaxAccel);
-    m_dynamicTrajectoryConfig.setStartVelocity(0);
-    m_dynamicTrajectoryConfig.setEndVelocity(0);
-    m_dynamicTrajectoryGenerator.generate(m_dynamicTrajectoryConfig, List.of(new Waypoint().fromHolonomicPose(logger.adjustedPose),
-                                                                            new Waypoint().fromHolonomicPose(targetPose2d)));
-    HoloDriveController.setTolerance(new Pose2d(.05, .05, Rotation2d.fromDegrees(5))); // T0D0: fix holo drive tolarances to actual fucking numbers not a random ass pose 2d bc this code cant get any less readable
-    
-    xController.reset(logger.adjustedPose.getX(), logger.velocities.getX());
-    yController.reset(logger.adjustedPose.getY(), logger.velocities.getY());
-    thetaController.reset(logger.pose.getRotation().getDegrees(), 0); // assumes no rotational movement
-
     drivetrain.registerTelemetry(logger::telemeterize);
-    dynamicTimer.restart();
+    if (!logger.adjustedPose.equals(targetPose2d)) {
+      // all this shit for like .2 meters of accuracy bc im too lazy to code pid
+      m_dynamicTrajectoryGenerator = new CustomTrajectoryGenerator();
+      m_dynamicTrajectoryConfig = new TrajectoryConfig(MaxSpeed, MaxAccel);
+      m_dynamicTrajectoryConfig.setStartVelocity(0); // probably not but whatever
+      m_dynamicTrajectoryConfig.setEndVelocity(0);
+      m_dynamicTrajectoryGenerator.generate(m_dynamicTrajectoryConfig, List.of(new Waypoint().fromHolonomicPose(logger.adjustedPose),
+                                                                              new Waypoint().fromHolonomicPose(targetPose2d)));
+      HoloDriveController.setTolerance(new Pose2d(.05, .05, Rotation2d.fromDegrees(5))); // T0D0: fix holo drive tolarances to actual fucking numbers not a random ass pose 2d bc this code cant get any less readable
+      
+      xController.reset(logger.adjustedPose.getX(), logger.velocities.getX());
+      yController.reset(logger.adjustedPose.getY(), logger.velocities.getY());
+      thetaController.reset(logger.pose.getRotation().getDegrees(), 0); // assumes no rotational movement
+
+
+      dynamicTimer.restart();
+    } else {
+      // throw new InvalidParameterException("Already at target position!"); // look dad! i did the error message!!!!! // commented to let code still run (make it a warning or somthin)
+    }
   }
 
-  public void driveDynamicTrajectory(boolean brakeAtEnd) {
-    drivetrain.registerTelemetry(logger::telemeterize);
-    ChassisSpeeds autoSpeeds = HoloDriveController.calculate(logger.adjustedPose,  
-                        m_dynamicTrajectoryGenerator.getDriveTrajectory().sample(dynamicTimer.get()),
-                        m_dynamicTrajectoryGenerator.getHolonomicRotationSequence().sample(dynamicTimer.get())
-                       );
+  public void driveDynamicTrajectory(Pose2d targetPose2d) {
+    if (!lastTarget.equals(targetPose2d)) {
+      setDynamicTrajectory(targetPose2d);
+    }
+    lastTarget = targetPose2d;
+    if (m_dynamicTrajectoryGenerator != null) {
+      drivetrain.registerTelemetry(logger::telemeterize);
+      ChassisSpeeds autoSpeeds = HoloDriveController.calculate(logger.adjustedPose,  
+                          m_dynamicTrajectoryGenerator.getDriveTrajectory().sample(dynamicTimer.get()),
+                          m_dynamicTrajectoryGenerator.getHolonomicRotationSequence().sample(dynamicTimer.get())
+                          );
 
-    if (!HoloDriveController.atReference()) {
-      drivetrain.setControl(drive.withVelocityX(autoSpeeds.vxMetersPerSecond)
-                                .withVelocityY(autoSpeeds.vyMetersPerSecond)
-                                .withRotationalRate(autoSpeeds.omegaRadiansPerSecond));
+      if (!HoloDriveController.atReference()) {
+        drivetrain.setControl(drive.withVelocityX(autoSpeeds.vxMetersPerSecond)
+                                  .withVelocityY(autoSpeeds.vyMetersPerSecond)
+                                  .withRotationalRate(autoSpeeds.omegaRadiansPerSecond));
 
-    } else if (brakeAtEnd) {
-      drivetrain.setControl(brake);
+      }
     } else {
-      drivetrain.setControl(coast);
+      // throw new InvalidParameterException("Trajectory has not been generated/nhave you ran the set trajectory method?"); // commented to let code still run (make it a warning or somthin)
     }
   }
 }

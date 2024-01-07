@@ -7,6 +7,7 @@ package frc.robot;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import com.ctre.phoenix6.hardware.Pigeon2;
 
@@ -30,13 +31,18 @@ public class Robot extends TimedRobot {
 
   private static Pigeon2 m_pigeon;
 
-
+  // demonstration position chooser
+  String[] autonomousList = {"0", "1", "2", "3"};
   
 
   @Override
   public void robotInit() {
     m_robotContainer = new RobotContainer();
     m_pigeon = new Pigeon2(50, "drivetrain");
+
+
+    SmartDashboard.putStringArray("Auto List", autonomousList);
+    
   }
 
   @Override
@@ -47,12 +53,28 @@ public class Robot extends TimedRobot {
   @Override
   public void autonomousInit() {
     m_pigeon.reset();
-    m_robotContainer.setDynamicTrajectory(new Pose2d(1.5, 0, Rotation2d.fromDegrees(0)));
+
+    m_robotContainer.setDynamicTrajectory(new Pose2d(0, 0, Rotation2d.fromDegrees(0)));
   }
 
   @Override
   public void autonomousPeriodic() {
-    m_robotContainer.driveDynamicTrajectory(false);
+    switch (SmartDashboard.getString("Auto Selector", "None")) {
+      case "0":
+        m_robotContainer.driveDynamicTrajectory(new Pose2d(0, 0, Rotation2d.fromDegrees(0)));
+        break;
+    
+      case "1":
+        m_robotContainer.driveDynamicTrajectory(new Pose2d(1.5, 0, Rotation2d.fromDegrees(0)));
+        break;
+      case "2":
+        m_robotContainer.driveDynamicTrajectory(new Pose2d(1.5, -.8, Rotation2d.fromDegrees(0)));
+        break;
+    
+      case "3":
+        m_robotContainer.driveDynamicTrajectory(new Pose2d(.6, -.8, Rotation2d.fromDegrees(0)));
+        break;
+    }
   }
 
   @Override

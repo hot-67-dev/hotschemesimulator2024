@@ -4,6 +4,8 @@
 
 package frc.robot;
 
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import com.ctre.phoenix6.hardware.Pigeon2;
@@ -45,12 +47,12 @@ public class Robot extends TimedRobot {
   @Override
   public void autonomousInit() {
     m_pigeon.reset();
-    m_robotContainer.autonSetup();
+    m_robotContainer.setDynamicTrajectory(new Pose2d(1.5, 0, Rotation2d.fromDegrees(0)));
   }
 
   @Override
   public void autonomousPeriodic() {
-    m_robotContainer.autonDriveTrajectory();
+    m_robotContainer.driveDynamicTrajectory(false);
   }
 
   @Override

@@ -11,6 +11,7 @@ import org.opencv.core.Mat;
 import edu.wpi.first.wpilibj.Timer;
 
 import com.ctre.phoenix6.Utils;
+import com.ctre.phoenix6.mechanisms.swerve.SwerveDrivetrain;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveRequest;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
@@ -32,6 +33,8 @@ import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 
 import frc.robot.trajectory.CustomHolonomicDriveController;
+
+
 
 
 public class RobotContainer {
@@ -59,34 +62,51 @@ public class RobotContainer {
 
 
   // trajectory planner setup, m_points is waypoints in trajectory
-  private List<Pose2d> m_poses = List.of(new Pose2d(-.3, -1.1, Rotation2d.fromDegrees(90)),
-                                          new Pose2d(2, -.9, Rotation2d.fromDegrees(90)),
-                                          new Pose2d(2.6, -.7, Rotation2d.fromDegrees(0)));
-
+  private List<Pose2d> m_poses = List.of(new Pose2d(6 , 2.5 ,Rotation2d.fromDegrees(0)),
+                                        new Pose2d(9.3 , -2.5 , Rotation2d.fromDegrees(0)),
+                                        new Pose2d(6.9, -6.25, Rotation2d.fromDegrees(0)),
+                                        new Pose2d(3, -3, Rotation2d.fromDegrees(0)),
+                                        new Pose2d(2.5, 0, Rotation2d.fromDegrees(0))
+                                          );
+                                        
+  // for loops dont like making new objects??? im sure i did somthing dumb - Maya
   public List<Waypoint> m_points = List.of(new Waypoint().fromHolonomicPose(m_poses.get(0)),
                                           new Waypoint().fromHolonomicPose(m_poses.get(1)),
-                                          new Waypoint().fromHolonomicPose(m_poses.get(2))
+                                          new Waypoint().fromHolonomicPose(m_poses.get(2)),
+                                          new Waypoint().fromHolonomicPose(m_poses.get(3)),
+                                          new Waypoint().fromHolonomicPose(m_poses.get(4))
                                           );
+
+
+  // trajectory object
   private CustomTrajectoryGenerator m_TrajectoryGenerator;
   private TrajectoryConfig m_TrajectoryConfig;
 
+  private CustomTrajectoryGenerator m_dynamicTrajectoryGenerator;
+  private TrajectoryConfig m_dynamicTrajectoryConfig;
+
+  // local stick vars for optimization not in method for intermethod sharing
   double LY;
   double LX;
   double RX;
 
-
   private final Timer autonTimer = new Timer();
 
-
+  private final Timer dynamicTimer = new Timer();
 
   /* Setting up bindings for necessary control of the swerve drive platform */
   XboxController  joystick = new XboxController(0); // My joystick
-  CommandSwerveDrivetrain drivetrain = TunerConstants.DriveTrain; // My drivetrain
-  SwerveRequest.FieldCentric drive = new SwerveRequest.FieldCentric().withIsOpenLoop(true); // I want field-centric
-                                                                                            // driving in open loop
+
+  SwerveDrivetrain drivetrain  = TunerConstants.DriveTrain;
+  SwerveRequest.FieldCentric drive = new SwerveRequest.FieldCentric(); // field-centric
   SwerveRequest.SwerveDriveBrake brake = new SwerveRequest.SwerveDriveBrake();
+  SwerveRequest.Idle coast = new SwerveRequest.Idle();
   SwerveRequest.PointWheelsAt point = new SwerveRequest.PointWheelsAt();
   Telemetry logger = new Telemetry(MaxSpeed);
+
+
+  // constructor :3 should probably move code
+  public RobotContainer() {}
 
   // set LY deadband
   private double deadbandLeftY() {
@@ -170,7 +190,10 @@ public class RobotContainer {
     drivetrain.setControl(drive.withVelocityX(-smartDeadbandLeftY(leftYdb, leftA) * MaxSpeed)
                               .withVelocityY(-smartDeadbandLeftX(leftXdb, leftA) * MaxSpeed)
                               .withRotationalRate(-smartDeadbandRightX(rightXdb, rightA) * MaxAngularRate));
-    
+    // drivetrain.setControl(drive.withVelocityX(-deadbandLeftY() * MaxSpeed)
+    //                           .withVelocityY(-deadbandLeftX() * MaxSpeed)
+    //                           .withRotationalRate(-deadbandRightX() * MaxAngularRate));
+
     // brakemode
     if (joystick.getAButton()) {
       drivetrain.setControl(brake);
@@ -193,8 +216,7 @@ public class RobotContainer {
     drivetrain.registerTelemetry(logger::telemeterize);
   }
 
-  // constructor :3 should probably move code
-  public RobotContainer() {}
+
     
   
 
@@ -222,7 +244,6 @@ public class RobotContainer {
     autonTimer.restart();
   }
 
-  // to fix
   public void autonDriveTrajectory() {
     drivetrain.registerTelemetry(logger::telemeterize);
     ChassisSpeeds autoSpeeds = HoloDriveController.calculate(logger.adjustedPose, 
@@ -236,6 +257,42 @@ public class RobotContainer {
 
     } else {
       drivetrain.setControl(brake);
+    }
+  }
+
+  public void setDynamicTrajectory(Pose2d targetPose2d) {
+    m_dynamicTrajectoryGenerator = new CustomTrajectoryGenerator();
+    m_dynamicTrajectoryConfig = new TrajectoryConfig(MaxSpeed, MaxAccel);
+    m_dynamicTrajectoryConfig.setStartVelocity(0);
+    m_dynamicTrajectoryConfig.setEndVelocity(0);
+    m_dynamicTrajectoryGenerator.generate(m_dynamicTrajectoryConfig, List.of(new Waypoint().fromHolonomicPose(logger.adjustedPose),
+                                                                            new Waypoint().fromHolonomicPose(targetPose2d)));
+    HoloDriveController.setTolerance(new Pose2d(.05, .05, Rotation2d.fromDegrees(5))); // T0D0: fix holo drive tolarances to actual fucking numbers not a random ass pose 2d bc this code cant get any less readable
+    
+    xController.reset(logger.adjustedPose.getX(), logger.velocities.getX());
+    yController.reset(logger.adjustedPose.getY(), logger.velocities.getY());
+    thetaController.reset(logger.pose.getRotation().getDegrees(), 0); // assumes no rotational movement
+
+    drivetrain.registerTelemetry(logger::telemeterize);
+    dynamicTimer.restart();
+  }
+
+  public void driveDynamicTrajectory(boolean brakeAtEnd) {
+    drivetrain.registerTelemetry(logger::telemeterize);
+    ChassisSpeeds autoSpeeds = HoloDriveController.calculate(logger.adjustedPose,  
+                        m_dynamicTrajectoryGenerator.getDriveTrajectory().sample(dynamicTimer.get()),
+                        m_dynamicTrajectoryGenerator.getHolonomicRotationSequence().sample(dynamicTimer.get())
+                       );
+
+    if (!HoloDriveController.atReference()) {
+      drivetrain.setControl(drive.withVelocityX(autoSpeeds.vxMetersPerSecond)
+                                .withVelocityY(autoSpeeds.vyMetersPerSecond)
+                                .withRotationalRate(autoSpeeds.omegaRadiansPerSecond));
+
+    } else if (brakeAtEnd) {
+      drivetrain.setControl(brake);
+    } else {
+      drivetrain.setControl(coast);
     }
   }
 }

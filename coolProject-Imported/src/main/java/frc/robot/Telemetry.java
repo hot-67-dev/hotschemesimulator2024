@@ -43,6 +43,7 @@ public class Telemetry {
     NetworkTable driveStats = inst.getTable("Drive");
     DoublePublisher velocityX = driveStats.getDoubleTopic("Velocity X").publish();
     DoublePublisher velocityY = driveStats.getDoubleTopic("Velocity Y").publish();
+    DoublePublisher velocityTheta = driveStats.getDoubleTopic("Velocity Theta").publish();
     DoublePublisher speed = driveStats.getDoubleTopic("Speed").publish();
     DoublePublisher odomPeriod = driveStats.getDoubleTopic("Odometry Period").publish();
 
@@ -117,6 +118,7 @@ public class Telemetry {
         speed.set(velocities.getNorm());
         velocityX.set(velocities.getX());
         velocityY.set(velocities.getY());
+        velocityTheta.set(velocities.getAngle().getDegrees()); // need to choose wether to do rads or degrees
         odomPeriod.set(state.OdometryPeriod);
 
         /* Telemeterize the module's states */

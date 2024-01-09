@@ -92,6 +92,8 @@ public class RobotContainer {
   private CustomTrajectoryGenerator m_dynamicTrajectoryGenerator;
   private TrajectoryConfig m_dynamicTrajectoryConfig;
 
+  private int poseCounter;
+
   // local stick vars for optimization not in method for intermethod sharing
   double LY;
   double LX;
@@ -308,10 +310,13 @@ public class RobotContainer {
       thetaController.reset(logger.pose.getRotation().getDegrees(), 0); // assumes no rotational movement
 
       // t0d0 change trajectory generator to raw xytheta controller line --> xController.calculate(logger.adjustedPose.getX(), targetPose2d.getX());
+      poseCounter = 0;
       dynamicTimer.restart();
     } else {
       // throw new InvalidParameterException("Already at target position!"); // look dad! i did the error message!!!!! // commented to let code still run (make it a warning or somthin)
     }
+
+
   }
 
   public void driveDynamicTrajectory(Pose2d targetPose2d) {
@@ -334,6 +339,35 @@ public class RobotContainer {
       }
     } else {
       // throw new InvalidParameterException("Trajectory has not been generated/nhave you ran the set trajectory method?"); // commented to let code still run (make it a warning or somthin)
+    }
+  }
+
+
+  public void resetBetterDynamics(Pose2d tolarances) {
+    drivetrain.registerTelemetry(logger::telemeterize);
+    
+    xController.reset(logger.adjustedPose.getX(), logger.velocities.getX());
+    yController.reset(logger.adjustedPose.getY(), logger.velocities.getY());
+    thetaController.reset(logger.pose.getRotation().getDegrees(), 0); //T0D0 ADD THETA SPEED CALC TO LOGGER
+
+    xController.setTolerance(tolarances.getX());
+    yController.setTolerance(tolarances.getY());
+    thetaController.setTolerance(tolarances.getRotation().getDegrees());
+
+    poseCounter = 0;
+  }
+
+  public void betterDynamics(Pose2d targetPose2d) {
+    drivetrain.registerTelemetry(logger::telemeterize);
+
+    drivetrain.setControl(drive.withVelocityX(xController.calculate(logger.velocities.getX(), targetPose2d.getX()))
+                                .withVelocityY(yController.calculate(logger.velocities.getY(), targetPose2d.getY()))
+                                .withRotationalRate(thetaController.calculate(logger.velocities.getAngle().getDegrees(), targetPose2d.getRotation().getDegrees())));
+
+    if (xController.atGoal() && yController.atGoal() && thetaController.atGoal()) {
+      poseCounter ++;
+    } else if (poseCounter >= 10) {  
+      drivetrain.setControl(brake); //might be more efficent to have the velocitycontroll to be in an if statment as to not have to calc pid (depends on rio load)
     }
   }
 }

@@ -12,6 +12,7 @@ import org.opencv.core.Mat;
 import edu.wpi.first.wpilibj.Timer;
 
 import com.ctre.phoenix6.Utils;
+import com.ctre.phoenix6.hardware.Pigeon2;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveDrivetrain;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveRequest;
 import edu.wpi.first.wpilibj.XboxController;
@@ -39,7 +40,7 @@ import frc.robot.trajectory.CustomHolonomicDriveController;
 
 
 public class RobotContainer {
-  final double MaxSpeed = 2; // 6 meters per second desired top speed (lowered for mayas house so I dont get murdered)
+  final double MaxSpeed = 3; // 6 meters per second desired top speed (lowered for mayas house so I dont get murdered)
   final double MaxAccel = .8;
   final double MaxAngularRate = Math.PI; // 1 rotation per second max angular velocity
   final double MaxAngularAccel = Math.PI * .5; 
@@ -52,6 +53,8 @@ public class RobotContainer {
 
   private final double driveKP = 6;
   private final double turnKP = 2;
+
+  private static Pigeon2 m_pigeon;
 
   Pose2d lastTarget = new Pose2d(0, 0, Rotation2d.fromDegrees(0));
   // double lastTarget = 0;
@@ -111,15 +114,18 @@ public class RobotContainer {
 
   // constructor :3 should probably move code
   public RobotContainer() {
-    
+    m_pigeon = new Pigeon2(50, "drivetrain");
   }
 
   // set LY deadband
   private double deadbandLeftY() {
     LY = joystick.getLeftY();
-    if (Math.abs(LY) > leftYdb) {
+    if (LY > leftYdb) {
 
-      return LY;
+      return (1 / (1 - leftYdb)) * (LY - leftYdb);
+    } else if (LY < -leftYdb) {
+      
+      return (-1 / (-1 - leftYdb)) * (LY + leftYdb); // should optimise by calculating in var deff at class start
     } else {
 
       return 0;
@@ -129,9 +135,12 @@ public class RobotContainer {
   // set LX deadband
   private double deadbandLeftX() {
     LX = joystick.getLeftX();
-    if (Math.abs(joystick.getLeftX()* joystick.getLeftX()) > leftXdb) {
+    if (LX > leftXdb) {
+
+      return (1 / (1 - leftXdb)) * (LX - leftXdb);
+    } else if (LX < -leftXdb) {
       
-      return joystick.getLeftX();
+      return (-1 / (-1 - leftXdb)) * (LX + leftXdb); // should optimise by calculating in var deff at class start
     } else {
 
       return 0;
@@ -141,9 +150,12 @@ public class RobotContainer {
   // set RX deadband
   private double deadbandRightX() {
     RX = joystick.getRightX();
-    if (Math.abs(RX) > rightXdb) {
+    if (RX > rightXdb) {
 
-    return RX;
+      return (1 / (1 - rightXdb)) * (RX - rightXdb);
+    } else if (RX < -rightXdb) {
+      
+      return (-1 / (-1 - rightXdb)) * (RX + rightXdb); // should optimise by calculating in var deff at class start
     } else {
 
       return 0;
@@ -193,12 +205,16 @@ public class RobotContainer {
   // method called in teleop, drives swerve with joysticks
   public void stickDrive() {
     // sets current control to drive
-    drivetrain.setControl(drive.withVelocityX(-smartDeadbandLeftY(leftYdb, leftA) * MaxSpeed)
-                              .withVelocityY(-smartDeadbandLeftX(leftXdb, leftA) * MaxSpeed)
-                              .withRotationalRate(-smartDeadbandRightX(rightXdb, rightA) * MaxAngularRate));
-    // drivetrain.setControl(drive.withVelocityX(-deadbandLeftY() * MaxSpeed)
-    //                           .withVelocityY(-deadbandLeftX() * MaxSpeed)
-    //                           .withRotationalRate(-deadbandRightX() * MaxAngularRate));
+
+    // smart deadband sticks better low speed control (cubic)
+    // drivetrain.setControl(drive.withVelocityX(-smartDeadbandLeftY(leftYdb, leftA) * MaxSpeed)
+    //                           .withVelocityY(-smartDeadbandLeftX(leftXdb, leftA) * MaxSpeed)
+    //                           .withRotationalRate(-smartDeadbandRightX(rightXdb, rightA) * MaxAngularRate)); 
+    
+     // normal(ish) deadband sticks better high speed control (translated linear)
+    drivetrain.setControl(drive.withVelocityX(-deadbandLeftY() * MaxSpeed)
+                              .withVelocityY(-deadbandLeftX() * MaxSpeed)
+                              .withRotationalRate(-deadbandRightX() * MaxAngularRate));
 
     // brakemode
     if (joystick.getAButton()) {
@@ -210,9 +226,14 @@ public class RobotContainer {
       drivetrain.setControl(point.withModuleDirection(new Rotation2d(-deadbandLeftY(), -deadbandLeftX())));
     }
 
-    // reset pose2d
+    // reset pose2d (for auton development)
     if (joystick.getYButton()) {
       logger.resetAdjPose();
+    }
+
+    // reset pidgeon
+    if (joystick.getXButton()) {
+      m_pigeon.reset();
     }
 
     // sim offset to match field
@@ -235,6 +256,8 @@ public class RobotContainer {
 
 
   public void autonSetup() {
+    m_pigeon.reset();
+
     m_TrajectoryGenerator = new CustomTrajectoryGenerator();
     m_TrajectoryConfig = new TrajectoryConfig(MaxSpeed, MaxAccel);
     m_TrajectoryConfig.setStartVelocity(0);
@@ -267,6 +290,8 @@ public class RobotContainer {
   }
 
   public void setDynamicTrajectory(Pose2d targetPose2d) {
+    m_pigeon.reset();
+
     drivetrain.registerTelemetry(logger::telemeterize);
     if (!logger.adjustedPose.equals(targetPose2d)) {
       // all this shit for like .2 meters of accuracy bc im too lazy to code pid

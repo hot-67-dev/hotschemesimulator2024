@@ -260,18 +260,20 @@ public class RobotContainer {
   public void autonSetup() {
     m_pigeon.reset();
 
+    drivetrain.registerTelemetry(logger::telemeterize);
+
     m_TrajectoryGenerator = new CustomTrajectoryGenerator();
     m_TrajectoryConfig = new TrajectoryConfig(MaxSpeed, MaxAccel);
-    m_TrajectoryConfig.setStartVelocity(0);
+    m_TrajectoryConfig.setStartVelocity(logger.velocities.getNorm());
     m_TrajectoryConfig.setEndVelocity(0);
     m_TrajectoryGenerator.generate(m_TrajectoryConfig, m_points);
     HoloDriveController.setTolerance(new Pose2d(.05, .05, Rotation2d.fromDegrees(5))); // T0D0: fix holo drive tolarances to actual fucking numbers not a random ass pose 2d bc this code cant get any less readable
     
     xController.reset(logger.adjustedPose.getX(), logger.velocities.getX());
     yController.reset(logger.adjustedPose.getY(), logger.velocities.getY());
-    thetaController.reset(logger.pose.getRotation().getDegrees(), 0); // assumes no rotational movement
+    thetaController.reset(logger.pose.getRotation().getDegrees(), logger.velocities.getAngle().getDegrees()); // assumes no rotational movement
 
-    drivetrain.registerTelemetry(logger::telemeterize);
+
     autonTimer.restart();
   }
 
@@ -299,7 +301,7 @@ public class RobotContainer {
       // all this shit for like .2 meters of accuracy bc im too lazy to code pid
       m_dynamicTrajectoryGenerator = new CustomTrajectoryGenerator();
       m_dynamicTrajectoryConfig = new TrajectoryConfig(MaxSpeed, MaxAccel);
-      m_dynamicTrajectoryConfig.setStartVelocity(0); // probably not but whatever
+      m_dynamicTrajectoryConfig.setStartVelocity(logger.velocities.getNorm()); // probably not but whatever
       m_dynamicTrajectoryConfig.setEndVelocity(0);
       m_dynamicTrajectoryGenerator.generate(m_dynamicTrajectoryConfig, List.of(new Waypoint().fromHolonomicPose(logger.adjustedPose),
                                                                               new Waypoint().fromHolonomicPose(targetPose2d)));
@@ -307,13 +309,13 @@ public class RobotContainer {
       
       xController.reset(logger.adjustedPose.getX(), logger.velocities.getX());
       yController.reset(logger.adjustedPose.getY(), logger.velocities.getY());
-      thetaController.reset(logger.pose.getRotation().getDegrees(), 0); // assumes no rotational movement
+      thetaController.reset(logger.pose.getRotation().getDegrees(), logger.velocities.getAngle().getDegrees());
 
       // t0d0 change trajectory generator to raw xytheta controller line --> xController.calculate(logger.adjustedPose.getX(), targetPose2d.getX());
       poseCounter = 0;
       dynamicTimer.restart();
     } else {
-      // throw new InvalidParameterException("Already at target position!"); // look dad! i did the error message!!!!! // commented to let code still run (make it a warning or somthin)
+      throw new InvalidParameterException("Already at target position! Cannot path to myself"); // look dad! i did the error message!!!!!
     }
 
 
@@ -331,11 +333,14 @@ public class RobotContainer {
                           m_dynamicTrajectoryGenerator.getHolonomicRotationSequence().sample(dynamicTimer.get())
                           );
 
-      if (!HoloDriveController.atReference()) {
-        drivetrain.setControl(drive.withVelocityX(autoSpeeds.vxMetersPerSecond)
+      drivetrain.setControl(drive.withVelocityX(autoSpeeds.vxMetersPerSecond)
                                   .withVelocityY(autoSpeeds.vyMetersPerSecond)
                                   .withRotationalRate(autoSpeeds.omegaRadiansPerSecond));
-        // T0D0 When at refrence for over x amount of time, brake/coast
+
+      if (HoloDriveController.atReference()) {
+        poseCounter ++;
+      } else if (poseCounter >= 10) {
+        drivetrain.setControl(brake);
       }
     } else {
       // throw new InvalidParameterException("Trajectory has not been generated/nhave you ran the set trajectory method?"); // commented to let code still run (make it a warning or somthin)
@@ -348,7 +353,7 @@ public class RobotContainer {
     
     xController.reset(logger.adjustedPose.getX(), logger.velocities.getX());
     yController.reset(logger.adjustedPose.getY(), logger.velocities.getY());
-    thetaController.reset(logger.pose.getRotation().getDegrees(), 0); //T0D0 ADD THETA SPEED CALC TO LOGGER
+    thetaController.reset(logger.pose.getRotation().getDegrees(), logger.velocities.getAngle().getDegrees());
 
     xController.setTolerance(tolarances.getX());
     yController.setTolerance(tolarances.getY());

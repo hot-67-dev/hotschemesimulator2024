@@ -307,7 +307,7 @@ public class RobotContainer {
       yController.reset(logger.adjustedPose.getY(), logger.velocities.getY());
       thetaController.reset(logger.pose.getRotation().getDegrees(), 0); // assumes no rotational movement
 
-
+      // t0d0 change trajectory generator to raw xytheta controller line --> xController.calculate(logger.adjustedPose.getX(), targetPose2d.getX());
       dynamicTimer.restart();
     } else {
       // throw new InvalidParameterException("Already at target position!"); // look dad! i did the error message!!!!! // commented to let code still run (make it a warning or somthin)

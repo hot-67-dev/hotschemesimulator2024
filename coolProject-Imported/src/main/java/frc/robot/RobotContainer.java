@@ -246,9 +246,6 @@ public class RobotContainer {
   }
 
 
-    
-  
-
   public void simulationUpdate() {
     drivetrain.updateSimState(0.02, 12);
 
@@ -362,9 +359,9 @@ public class RobotContainer {
     poseCounter = 0;
   }
 
-  public void betterDynamics(Pose2d targetPose2d) {
+  public void betterDynamics(Pose2d targetPose2d, Pose2d tolarances) {
     drivetrain.registerTelemetry(logger::telemeterize);
-
+    
     drivetrain.setControl(drive.withVelocityX(xController.calculate(logger.velocities.getX(), targetPose2d.getX()))
                                 .withVelocityY(yController.calculate(logger.velocities.getY(), targetPose2d.getY()))
                                 .withRotationalRate(thetaController.calculate(logger.velocities.getAngle().getDegrees(), targetPose2d.getRotation().getDegrees())));

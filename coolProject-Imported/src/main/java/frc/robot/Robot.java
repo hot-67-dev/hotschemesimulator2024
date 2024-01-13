@@ -31,7 +31,7 @@ public class Robot extends TimedRobot {
 
 
   // demonstration position chooser
-  String[] autonomousList = {"0", "1", "2", "3"};
+  String[] autonomousList = {"0", "1", "2", "3", "4"};
   
 
   @Override
@@ -49,28 +49,34 @@ public class Robot extends TimedRobot {
 
   @Override
   public void autonomousInit() {
-
-    m_robotContainer.setDynamicTrajectory(new Pose2d(0, 0, Rotation2d.fromDegrees(0)));
+    m_robotContainer.autonSetup();
+    m_robotContainer.resetBetterDynamics(new Pose2d(0.1, 0.1, Rotation2d.fromDegrees(0)), .2);
   }
 
   @Override
   public void autonomousPeriodic() {
-    switch (SmartDashboard.getString("Auto Selector", "None")) {
-      case "0":
-        m_robotContainer.driveDynamicTrajectory(new Pose2d(0, 0, Rotation2d.fromDegrees(0)));
-        break;
+    m_robotContainer.betterDynamics(new Pose2d(1.5, 1.5, Rotation2d.fromDegrees(0)));
+    // m_robotContainer.autonDriveTrajectory();
+    // switch (SmartDashboard.getString("Auto Selector", "None")) {
+    //   case "0":
+    //     m_robotContainer.betterDynamics(new Pose2d(0, 0, Rotation2d.fromDegrees(0)));
+    //     break;
     
-      case "1":
-        m_robotContainer.driveDynamicTrajectory(new Pose2d(1.5, 0, Rotation2d.fromDegrees(0)));
-        break;
-      case "2":
-        m_robotContainer.driveDynamicTrajectory(new Pose2d(1.5, -.8, Rotation2d.fromDegrees(0)));
-        break;
+    //   case "1":
+    //     m_robotContainer.betterDynamics(new Pose2d(5.5, 1.5, Rotation2d.fromDegrees(0)));
+    //     break;
+    //   case "2":
+    //     m_robotContainer.betterDynamics(new Pose2d(3.7, 3.1, Rotation2d.fromDegrees(0)));
+    //     break;
     
-      case "3":
-        m_robotContainer.driveDynamicTrajectory(new Pose2d(.6, -.8, Rotation2d.fromDegrees(0)));
-        break;
-    }
+    //   case "3":
+    //     m_robotContainer.betterDynamics(new Pose2d(8, 2, Rotation2d.fromDegrees(0)));
+    //     break;
+
+    //   case "4":
+    //     m_robotContainer.betterDynamics(new Pose2d(1, 1.5, Rotation2d.fromDegrees(0)));
+    //     break;
+    // }
   }
 
   @Override

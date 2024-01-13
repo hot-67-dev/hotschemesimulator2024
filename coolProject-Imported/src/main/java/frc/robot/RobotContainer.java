@@ -40,10 +40,10 @@ import frc.robot.trajectory.CustomHolonomicDriveController;
 
 
 public class RobotContainer {
-  final double MaxSpeed = 3; // 6 meters per second desired top speed (lowered for mayas house so I dont get murdered)
-  final double MaxAccel = .8;
-  final double MaxAngularRate = Math.PI; // 1 rotation per second max angular velocity
-  final double MaxAngularAccel = Math.PI * .5; 
+  final double MaxSpeed = 2; // 6 meters per second desired top speed (lowered for mayas house so I dont get murdered)
+  final double MaxAccel = 1;
+  final double MaxAngularRate = Math.PI * 2; // 1 rotation per second max angular velocity
+  final double MaxAngularAccel = Math.PI; 
   final double leftXdb = .1;
   final double leftYdb = .1; 
   final double leftA = 1.0101010101;
@@ -51,7 +51,7 @@ public class RobotContainer {
   final double rightXdb = .15;
   final double rightA = 1.02301790281;
 
-  private final double driveKP = 6;
+  private final double driveKP = 2;
   private final double turnKP = 2;
 
   private static Pigeon2 m_pigeon;
@@ -60,20 +60,21 @@ public class RobotContainer {
   // double lastTarget = 0;
 
   // pid for autons
-  private final ProfiledPIDController xController = new ProfiledPIDController(driveKP, 0, 0.0, new TrapezoidProfile.Constraints(MaxSpeed, MaxAccel));
-  private final ProfiledPIDController yController = new ProfiledPIDController(driveKP, 0, 0.0, new TrapezoidProfile.Constraints(MaxSpeed, MaxAccel));
+  private final ProfiledPIDController xController = new ProfiledPIDController(driveKP, .6, .025, new TrapezoidProfile.Constraints(MaxSpeed, MaxAccel));
+  private final ProfiledPIDController yController = new ProfiledPIDController(driveKP, .6, .025, new TrapezoidProfile.Constraints(MaxSpeed, MaxAccel));
   private final ProfiledPIDController thetaController = new ProfiledPIDController(turnKP, 0.0, 0.0, new TrapezoidProfile.Constraints(MaxAngularRate, MaxAngularAccel));
 
+  private final ProfiledPIDController velocityController = new ProfiledPIDController(driveKP, 0, 0, new TrapezoidProfile.Constraints(MaxSpeed, MaxAccel));
   // private final HolonomicDriveController HoloDriveController = new HolonomicDriveController(xController, yController, thetaController); // built in controller
   private final CustomHolonomicDriveController HoloDriveController = new CustomHolonomicDriveController(xController, yController, thetaController); // custom controller
 
 
   // trajectory planner setup, m_points is waypoints in trajectory
-  private List<Pose2d> m_poses = List.of(new Pose2d(6 , 2.5 ,Rotation2d.fromDegrees(0)),
-                                        new Pose2d(9.3 , -2.5 , Rotation2d.fromDegrees(0)),
-                                        new Pose2d(6.9, -6.25, Rotation2d.fromDegrees(0)),
-                                        new Pose2d(3, -3, Rotation2d.fromDegrees(0)),
-                                        new Pose2d(2.5, 0, Rotation2d.fromDegrees(0))
+  private List<Pose2d> m_poses = List.of(new Pose2d(4 , 0 ,Rotation2d.fromDegrees(0)),
+                                        new Pose2d(5.5 , 1.5 , Rotation2d.fromDegrees(0)),
+                                        new Pose2d(3.7, 3.1, Rotation2d.fromDegrees(0)),
+                                        new Pose2d(8, 2, Rotation2d.fromDegrees(0)),
+                                        new Pose2d(1, 1.5, Rotation2d.fromDegrees(0))
                                           );
                                         
   // for loops dont like making new objects??? im sure i did somthing dumb - Maya
@@ -83,7 +84,6 @@ public class RobotContainer {
                                           new Waypoint().fromHolonomicPose(m_poses.get(3)),
                                           new Waypoint().fromHolonomicPose(m_poses.get(4))
                                           );
-
 
   // trajectory object
   private CustomTrajectoryGenerator m_TrajectoryGenerator;
@@ -209,14 +209,14 @@ public class RobotContainer {
     // sets current control to drive
 
     // smart deadband sticks better low speed control (cubic)
-    // drivetrain.setControl(drive.withVelocityX(-smartDeadbandLeftY(leftYdb, leftA) * MaxSpeed)
-    //                           .withVelocityY(-smartDeadbandLeftX(leftXdb, leftA) * MaxSpeed)
-    //                           .withRotationalRate(-smartDeadbandRightX(rightXdb, rightA) * MaxAngularRate)); 
+    drivetrain.setControl(drive.withVelocityX(-smartDeadbandLeftY(leftYdb, leftA) * MaxSpeed)
+                              .withVelocityY(-smartDeadbandLeftX(leftXdb, leftA) * MaxSpeed)
+                              .withRotationalRate(-smartDeadbandRightX(rightXdb, rightA) * MaxAngularRate)); 
     
      // normal(ish) deadband sticks better high speed control (translated linear)
-    drivetrain.setControl(drive.withVelocityX(-deadbandLeftY() * MaxSpeed)
-                              .withVelocityY(-deadbandLeftX() * MaxSpeed)
-                              .withRotationalRate(-deadbandRightX() * MaxAngularRate));
+    // drivetrain.setControl(drive.withVelocityX(-deadbandLeftY() * MaxSpeed)
+    //                           .withVelocityY(-deadbandLeftX() * MaxSpeed)
+    //                           .withRotationalRate(-deadbandRightX() * MaxAngularRate));
 
     // brakemode
     if (joystick.getAButton()) {
@@ -264,7 +264,7 @@ public class RobotContainer {
     m_TrajectoryConfig.setStartVelocity(logger.velocities.getNorm());
     m_TrajectoryConfig.setEndVelocity(0);
     m_TrajectoryGenerator.generate(m_TrajectoryConfig, m_points);
-    HoloDriveController.setTolerance(new Pose2d(.05, .05, Rotation2d.fromDegrees(5))); // T0D0: fix holo drive tolarances to actual fucking numbers not a random ass pose 2d bc this code cant get any less readable
+    HoloDriveController.setTolerance(new Pose2d(.2, .2, Rotation2d.fromDegrees(5))); // T0D0: fix holo drive tolarances to actual fucking numbers not a random ass pose 2d bc this code cant get any less readable
     
     xController.reset(logger.adjustedPose.getX(), logger.velocities.getX());
     yController.reset(logger.adjustedPose.getY(), logger.velocities.getY());
@@ -285,86 +285,34 @@ public class RobotContainer {
                                 .withVelocityY(autoSpeeds.vyMetersPerSecond)
                                 .withRotationalRate(autoSpeeds.omegaRadiansPerSecond));
 
-    } else {
-      drivetrain.setControl(brake);
-    }
+    } // else {
+    //   drivetrain.setControl(brake);
+    // }
   }
 
-  public void setDynamicTrajectory(Pose2d targetPose2d) {
-    m_pigeon.reset();
 
+  public void resetBetterDynamics(Pose2d poseTolarance, Double velocityTolarance) {
     drivetrain.registerTelemetry(logger::telemeterize);
-    if (!logger.adjustedPose.equals(targetPose2d)) {
-      // all this shit for like .2 meters of accuracy bc im too lazy to code pid
-      m_dynamicTrajectoryGenerator = new CustomTrajectoryGenerator();
-      m_dynamicTrajectoryConfig = new TrajectoryConfig(MaxSpeed, MaxAccel);
-      m_dynamicTrajectoryConfig.setStartVelocity(logger.velocities.getNorm()); // probably not but whatever
-      m_dynamicTrajectoryConfig.setEndVelocity(0);
-      m_dynamicTrajectoryGenerator.generate(m_dynamicTrajectoryConfig, List.of(new Waypoint().fromHolonomicPose(logger.adjustedPose),
-                                                                              new Waypoint().fromHolonomicPose(targetPose2d)));
-      HoloDriveController.setTolerance(new Pose2d(.05, .05, Rotation2d.fromDegrees(5))); // T0D0: fix holo drive tolarances to actual fucking numbers not a random ass pose 2d bc this code cant get any less readable
-      
-      xController.reset(logger.adjustedPose.getX(), logger.velocities.getX());
-      yController.reset(logger.adjustedPose.getY(), logger.velocities.getY());
-      thetaController.reset(logger.pose.getRotation().getDegrees(), logger.velocities.getAngle().getDegrees());
-
-      // t0d0 change trajectory generator to raw xytheta controller line --> xController.calculate(logger.adjustedPose.getX(), targetPose2d.getX());
-      poseCounter = 0;
-      dynamicTimer.restart();
-    } else {
-      throw new InvalidParameterException("Already at target position! Cannot path to myself"); // look dad! i did the error message!!!!!
-    }
 
 
-  }
-
-  public void driveDynamicTrajectory(Pose2d targetPose2d) {
-    if (!lastTarget.equals(targetPose2d)) {
-      setDynamicTrajectory(targetPose2d);
-    }
-    lastTarget = targetPose2d;
-    if (m_dynamicTrajectoryGenerator != null) {
-      drivetrain.registerTelemetry(logger::telemeterize);
-      ChassisSpeeds autoSpeeds = HoloDriveController.calculate(logger.adjustedPose,  
-                          m_dynamicTrajectoryGenerator.getDriveTrajectory().sample(dynamicTimer.get()),
-                          m_dynamicTrajectoryGenerator.getHolonomicRotationSequence().sample(dynamicTimer.get())
-                          );
-
-      drivetrain.setControl(drive.withVelocityX(autoSpeeds.vxMetersPerSecond)
-                                  .withVelocityY(autoSpeeds.vyMetersPerSecond)
-                                  .withRotationalRate(autoSpeeds.omegaRadiansPerSecond));
-
-      if (HoloDriveController.atReference()) {
-        poseCounter ++;
-      } else if (poseCounter >= 10) {
-        drivetrain.setControl(brake);
-      }
-    } else {
-      // throw new InvalidParameterException("Trajectory has not been generated/nhave you ran the set trajectory method?"); // commented to let code still run (make it a warning or somthin)
-    }
-  }
-
-
-  public void resetBetterDynamics(Pose2d tolarances) {
-    drivetrain.registerTelemetry(logger::telemeterize);
-    
     xController.reset(logger.adjustedPose.getX(), logger.velocities.getX());
     yController.reset(logger.adjustedPose.getY(), logger.velocities.getY());
+    velocityController.reset(logger.adjustedPose.getTranslation().getNorm(), logger.velocities.getNorm());
     thetaController.reset(logger.pose.getRotation().getDegrees(), logger.velocities.getAngle().getDegrees());
 
-    xController.setTolerance(tolarances.getX());
-    yController.setTolerance(tolarances.getY());
-    thetaController.setTolerance(tolarances.getRotation().getDegrees());
+    xController.setTolerance(poseTolarance.getX());
+    yController.setTolerance(poseTolarance.getY());
+    velocityController.setTolerance(velocityTolarance);
+    thetaController.setTolerance(poseTolarance.getRotation().getDegrees());
 
     poseCounter = 0;
   }
 
-  public void betterDynamics(Pose2d targetPose2d, Pose2d tolarances) {
+  public void betterDynamics(Pose2d targetPose2d) {
     drivetrain.registerTelemetry(logger::telemeterize);
-    
-    drivetrain.setControl(drive.withVelocityX(xController.calculate(logger.velocities.getX(), targetPose2d.getX()))
-                                .withVelocityY(yController.calculate(logger.velocities.getY(), targetPose2d.getY()))
-                                .withRotationalRate(thetaController.calculate(logger.velocities.getAngle().getDegrees(), targetPose2d.getRotation().getDegrees())));
+
+    ChassisSpeeds autoChassisSpeed = HoloDriveController.calculate(logger.adjustedPose, targetPose2d, velocityController.calculate(logger.velocities.getNorm(), logger.adjustedPose.minus(targetPose2d).getTranslation().getNorm()), Rotation2d.fromDegrees(0), 0);    
+    drivetrain.setControl(drive.withVelocityX(autoChassisSpeed.vxMetersPerSecond).withVelocityY(autoChassisSpeed.vyMetersPerSecond)); // thetaController.calculate(logger.velocities.getAngle().getDegrees(), targetPose2d.getRotation().getDegrees()))
 
     if (xController.atGoal() && yController.atGoal() && thetaController.atGoal()) {
       poseCounter ++;
